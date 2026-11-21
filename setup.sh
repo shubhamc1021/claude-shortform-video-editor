@@ -1,5 +1,5 @@
 #!/bin/bash
-# Claude Shortform Video Editor: one-time setup (macOS only).
+# Claude Shortform Video Editor: one-time setup (macOS; Linux supported via apt-get).
 #
 #   ./setup.sh           install everything that's missing, then check it all works
 #   ./setup.sh --check   only check, change nothing
@@ -20,13 +20,28 @@ step() { printf "\n\033[1m%s\033[0m\n" "$1"; }
 FAILED=0
 
 step "1. Your computer"
-if [ "$(uname)" != "Darwin" ]; then
-  bad "This editor runs on macOS only."
+OS=$(uname)
+ARCH=$(uname -m)
+if [ "$OS" = "Darwin" ]; then
+  ok "macOS $(sw_vers -productVersion) ($ARCH)"
+elif [ "$OS" = "Linux" ] && command -v apt-get >/dev/null 2>&1; then
+  ok "Linux $(. /etc/os-release 2>/dev/null; echo "${PRETTY_NAME:-}") ($ARCH)"
+else
+  bad "This editor runs on macOS, or on Linux with apt-get."
   exit 1
 fi
-ARCH=$(uname -m)
-ok "macOS $(sw_vers -productVersion) ($ARCH)"
 
+# Install a package with the platform's package manager
+pkg_install() { # pkg_install <brew formula> <apt package>
+  if [ "$OS" = "Darwin" ]; then
+    brew install "$1" >/dev/null
+  else
+    SUDO=""; [ "$(id -u)" != 0 ] && SUDO="sudo"
+    { $SUDO apt-get update -qq && DEBIAN_FRONTEND=noninteractive $SUDO apt-get install -y -qq "$2"; } >/dev/null
+  fi
+}
+
+if [ "$OS" = "Darwin" ]; then
 step "2. Homebrew"
 if ! command -v brew >/dev/null 2>&1; then
   for b in /opt/homebrew/bin/brew /usr/local/bin/brew; do
@@ -41,21 +56,26 @@ else
   echo "    Then run ./setup.sh again."
   exit 1
 fi
+else
+step "2. Package manager"
+ok "apt-get"
+fi
 
 step "3. Tools (ffmpeg, Node, Python)"
-need() { # need <command> <brew formula>
+need() { # need <command> <brew formula> <apt package>
   if command -v "$1" >/dev/null 2>&1; then
     ok "$1"
   elif [ $CHECK_ONLY = 1 ]; then
     bad "$1 is missing"
   else
     echo "  installing $2..."
-    brew install "$2" >/dev/null && ok "$1 (installed)" || bad "could not install $2"
+    pkg_install "$2" "$3" && ok "$1 (installed)" || bad "could not install $2"
   fi
 }
-need ffmpeg ffmpeg
-need ffprobe ffmpeg
-need node node
+need ffmpeg ffmpeg ffmpeg
+need ffprobe ffmpeg ffmpeg
+need node node nodejs
+need npm node npm
 
 # Python 3.10+ for Whisper (the one built into macOS is too old)
 PY=""
@@ -66,17 +86,21 @@ for c in python3.12 python3.11 python3.13 python3.10 python3; do
 done
 if [ -z "$PY" ] && [ $CHECK_ONLY = 0 ]; then
   echo "  installing python@3.12..."
-  brew install python@3.12 >/dev/null && PY="$(brew --prefix python@3.12)/bin/python3.12"
+  if [ "$OS" = "Darwin" ]; then
+    brew install python@3.12 >/dev/null && PY="$(brew --prefix python@3.12)/bin/python3.12"
+  else
+    pkg_install python@3.12 "python3 python3-venv" && PY=$(command -v python3)
+  fi
 fi
 [ -n "$PY" ] && ok "Python $("$PY" -c 'import platform; print(platform.python_version())')" || bad "Python 3.10+ is missing"
 
 NODE_MAJOR=$(node -v 2>/dev/null | sed 's/v\([0-9]*\).*/\1/')
 if [ -n "$NODE_MAJOR" ] && [ "$NODE_MAJOR" -lt 18 ]; then
-  bad "Node $NODE_MAJOR is too old (Remotion needs 18+). Run: brew upgrade node"
+  bad "Node $NODE_MAJOR is too old (Remotion needs 18+). Upgrade Node (macOS: brew upgrade node)"
 fi
 
 step "4. Transcription (Whisper) + downloads (yt-dlp)"
-if [ "$ARCH" = "arm64" ]; then WPKG="mlx-whisper"; WMOD="mlx_whisper"; else WPKG="openai-whisper"; WMOD="whisper"; fi
+if [ "$OS" = "Darwin" ] && [ "$ARCH" = "arm64" ]; then WPKG="mlx-whisper"; WMOD="mlx_whisper"; else WPKG="openai-whisper"; WMOD="whisper"; fi
 if [ -x .venv/bin/python ] && .venv/bin/python -c "import $WMOD, numpy, yt_dlp" 2>/dev/null; then
   ok "$WPKG"
   # Instagram and TikTok change often and an old yt-dlp stops downloading them, so keep it current
@@ -86,7 +110,10 @@ elif [ $CHECK_ONLY = 1 ]; then
   bad "$WPKG or yt-dlp is not installed"
 elif [ -n "$PY" ]; then
   echo "  creating .venv and installing $WPKG (a few minutes the first time)..."
-  "$PY" -m venv .venv && .venv/bin/pip install -q --upgrade pip && .venv/bin/pip install -q "$WPKG" numpy yt-dlp \
+  # On Linux, use CPU-only PyTorch (the default wheel pulls several GB of CUDA libraries)
+  TORCH_CPU=true
+  [ "$OS" = "Linux" ] && TORCH_CPU='.venv/bin/pip install -q --retries 1 torch --index-url https://download.pytorch.org/whl/cpu >/dev/null 2>&1 || echo "  (CPU-only PyTorch unavailable, using the standard build)"'
+  "$PY" -m venv .venv && .venv/bin/pip install -q --upgrade pip && eval "$TORCH_CPU" && .venv/bin/pip install -q "$WPKG" numpy yt-dlp \
     && ok "$WPKG + yt-dlp (installed)" || bad "could not install $WPKG"
 fi
 
