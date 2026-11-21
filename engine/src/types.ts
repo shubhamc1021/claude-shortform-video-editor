@@ -62,6 +62,18 @@ export type Edit = {
   words: Word[];
   beats: Beat[];
   keywords?: string[]; // words/phrases shown in the accent font + colour in captions ("self-worth", "attachment style")
+  stickers?: Sticker[]; // small framed images/clips that pop in over whatever is on screen (reaction GIFs, memes)
+};
+
+/** A reaction image or short clip popping in over the edit. x/y = centre in 1080x1920 px, w = width. */
+export type Sticker = {
+  src: string; // file in assets/ (png/jpg/webp, or a short mp4/webm that loops)
+  s: number; e: number; // cut timeline
+  x: number; y: number; w: number;
+  rotate?: number; // degrees
+  sfx?: SfxName | string | false; // default "pop"
+  ratio?: number; // width / height, filled in by build_props
+  frames?: number; // clip length in frames (videos), filled in by build_props
 };
 
 export type CaptionStyle = "pill" | "plain" | "outline" | "box" | "highlight" | "none";

@@ -111,6 +111,24 @@ for (const b of beats) {
   } catch { /* unknown tone: treated as dark */ }
 }
 
+// stickers: check files, measure shape (and clip length for videos)
+const stickers = edit.stickers ?? [];
+stickers.forEach((st, i) => {
+  const f = path.join(P, "assets", String(st.src).replace(/^assets\//, ""));
+  if (!fs.existsSync(f)) { problems.push(`sticker ${i + 1}: can't find assets/${st.src}`); return; }
+  try {
+    const out = execFileSync("ffprobe", ["-v", "error", "-count_frames", "-select_streams", "v:0", "-show_entries", "stream=width,height,nb_read_frames", "-of", "csv=p=0", f]).toString().trim().split(",");
+    st.ratio = Number(out[0]) / Number(out[1]);
+    if (/\.(mp4|mov|webm|m4v)$/i.test(st.src)) st.frames = Number(out[2]) || 30;
+  } catch { st.ratio = 1; }
+  if (!(st.e > st.s)) problems.push(`sticker ${i + 1}: end must be after start`);
+});
+if (problems.length) {
+  console.error(`\nThe edit has ${problems.length} problem(s) to fix in projects/${slug}/edit.json:`);
+  for (const p of problems) console.error(`  - ${p}`);
+  process.exit(1);
+}
+
 const props = {
   video: `${slug}/cut.mp4`,
   assets: `${slug}/assets/`,
@@ -119,6 +137,7 @@ const props = {
   words,
   beats,
   keywords: edit.keywords ?? [],
+  stickers,
   style,
 };
 fs.writeFileSync(path.join(P, ".props.json"), JSON.stringify(props));

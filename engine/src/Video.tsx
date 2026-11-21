@@ -1,12 +1,12 @@
 import React, { useMemo } from "react";
-import { AbsoluteFill, Audio, OffthreadVideo, Sequence, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Audio, Img, Loop, OffthreadVideo, Sequence, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { Background, InsetBackground } from "./components/Background";
 import { Captions } from "./components/Captions";
 import { Arrive, FitBox } from "./components/Motion";
 import { PanelView } from "./components/panels";
 import { AssetsContext, SurfaceContext, useAsset } from "./components/RichText";
 import { H, mergeStyle, SAFE, springFor, StyleContext, useFonts, W } from "./style";
-import type { Beat, Enter, Layout, Props, Style } from "./types";
+import type { Beat, Enter, Layout, Props, Sticker, Style } from "./types";
 
 const SFX = new Set(["whoosh", "pop", "chime", "chew"]);
 
@@ -50,6 +50,56 @@ const surfaceFor = (b: Beat, s: Style) => {
   return s.colors.background;
 };
 
+/** One sticker: pops in with a little tilt, sits in a white frame, fades out at the end. */
+const StickerView: React.FC<{ st: Sticker; style: Style }> = ({ st, style }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const asset = useAsset();
+  const dur = Math.max(1, Math.round((st.e - st.s) * fps));
+  const p = spring({ frame, fps, config: { damping: 14, stiffness: 260, mass: 0.6 }, durationInFrames: 12 });
+  const out = Math.min(1, Math.max(0, (dur - frame) / 5));
+  const h = st.w / (st.ratio || 1);
+  const isVid = /\.(mp4|mov|webm|m4v)$/i.test(st.src);
+  const media: React.CSSProperties = { width: "100%", height: "100%", objectFit: "cover", display: "block" };
+  return (
+    <div
+      style={{
+        position: "absolute", left: st.x - st.w / 2, top: st.y - h / 2, width: st.w, height: h,
+        transform: `scale(${0.4 + 0.6 * p}) rotate(${(st.rotate ?? 0) * p}deg)`, opacity: Math.min(p * 1.6, 1) * out,
+        borderRadius: 18, overflow: "hidden", boxShadow: `0 0 0 10px ${style.colors.surface}, 0 22px 50px rgba(0,0,0,0.35)`,
+      }}
+    >
+      {isVid ? (
+        <Loop durationInFrames={Math.max(1, st.frames ?? 30)}>
+          <OffthreadVideo src={asset(st.src)} muted style={media} />
+        </Loop>
+      ) : (
+        <Img src={asset(st.src)} style={media} />
+      )}
+    </div>
+  );
+};
+
+const StickerTrack: React.FC<{ stickers: Sticker[]; style: Style }> = ({ stickers, style }) => {
+  const { fps } = useVideoConfig();
+  const asset = useAsset();
+  return (
+    <>
+      {stickers.map((st, i) => {
+        const from = Math.round(st.s * fps);
+        const dur = Math.max(1, Math.round(st.e * fps) - from);
+        const sfx = st.sfx === undefined ? "pop" : st.sfx;
+        return (
+          <Sequence key={`st${i}`} from={from} durationInFrames={dur} layout="none" name={`sticker ${i + 1}: ${st.src}`}>
+            <StickerView st={st} style={style} />
+            {sfx && <Audio src={SFX.has(sfx) ? staticFile(`sfx/${sfx}.wav`) : asset(sfx)} volume={style.sfx?.volume ?? 0.35} />}
+          </Sequence>
+        );
+      })}
+    </>
+  );
+};
+
 const SfxTrack: React.FC<{ beats: Beat[]; style: Style }> = ({ beats, style }) => {
   const { fps } = useVideoConfig();
   const asset = useAsset();
@@ -83,7 +133,7 @@ export const Main: React.FC<Props & { assets: string }> = (props) => {
   );
 };
 
-const Edit: React.FC<Props & { assets: string }> = ({ video, words, beats, style, faceCenter = 0.42, keywords }) => {
+const Edit: React.FC<Props & { assets: string }> = ({ video, words, beats, style, faceCenter = 0.42, keywords, stickers = [] }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const t = frame / fps;
@@ -171,6 +221,7 @@ const Edit: React.FC<Props & { assets: string }> = ({ video, words, beats, style
       {beat?.captions !== false && (
         <Captions words={words} keywords={keywords} y={ib ? Math.round(ib.centerY + (ib.bottom - ib.top) * 0.22) : captionY(layout, splitY)} />
       )}
+      <StickerTrack stickers={stickers} style={style} />
       <SfxTrack beats={beats} style={style} />
     </AbsoluteFill>
   );
