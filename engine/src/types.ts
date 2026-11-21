@@ -45,6 +45,7 @@ export type Beat = {
   zoom?: number; // face punch-in (1 = none). Face/split beats alternate automatically if unset
   enter?: Enter; // how the graphic arrives (cycles automatically if unset)
   captions?: boolean; // false hides captions for this beat
+  panelAlign?: "top" | "center"; // where the panel sits in its area (default centre)
   bgTone?: string; // set by build_props: average colour of an image bg, so text on it picks a readable colour
   bg?: string; // inset only: "#hex" colour or an image/video in assets/ (e.g. an outfit-matched Pinterest pick)
   sfx?: SfxName | string | false; // sound at the start of the beat: built-in name or a file in assets/; false = none
@@ -67,7 +68,8 @@ export type Edit = {
 
 /** A reaction image or short clip popping in over the edit. x/y = centre in 1080x1920 px, w = width. */
 export type Sticker = {
-  src: string; // file in assets/ (png/jpg/webp, or a short mp4/webm that loops)
+  src?: string; // file in assets/ (png/jpg/webp, or a short mp4/webm that loops)
+  emoji?: string; // or an emoji instead of a file (no frame), w = its size
   s: number; e: number; // cut timeline
   x: number; y: number; w: number;
   rotate?: number; // degrees

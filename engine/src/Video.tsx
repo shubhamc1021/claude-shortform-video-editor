@@ -58,8 +58,22 @@ const StickerView: React.FC<{ st: Sticker; style: Style }> = ({ st, style }) => 
   const dur = Math.max(1, Math.round((st.e - st.s) * fps));
   const p = spring({ frame, fps, config: { damping: 14, stiffness: 260, mass: 0.6 }, durationInFrames: 12 });
   const out = Math.min(1, Math.max(0, (dur - frame) / 5));
+  if (st.emoji) {
+    return (
+      <div
+        style={{
+          position: "absolute", left: st.x - st.w / 2, top: st.y - st.w / 2, width: st.w, height: st.w, display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: st.w * 0.82, lineHeight: 1, transform: `scale(${0.3 + 0.7 * p}) rotate(${(st.rotate ?? 0) * p}deg)`, opacity: Math.min(p * 1.6, 1) * out,
+          filter: "drop-shadow(0 10px 18px rgba(0,0,0,0.35))",
+        }}
+      >
+        {st.emoji}
+      </div>
+    );
+  }
   const h = st.w / (st.ratio || 1);
-  const isVid = /\.(mp4|mov|webm|m4v)$/i.test(st.src);
+  const src = st.src ?? "";
+  const isVid = /\.(mp4|mov|webm|m4v)$/i.test(src);
   const media: React.CSSProperties = { width: "100%", height: "100%", objectFit: "cover", display: "block" };
   return (
     <div
@@ -71,10 +85,10 @@ const StickerView: React.FC<{ st: Sticker; style: Style }> = ({ st, style }) => 
     >
       {isVid ? (
         <Loop durationInFrames={Math.max(1, st.frames ?? 30)}>
-          <OffthreadVideo src={asset(st.src)} muted style={media} />
+          <OffthreadVideo src={asset(src)} muted style={media} />
         </Loop>
       ) : (
-        <Img src={asset(st.src)} style={media} />
+        <Img src={asset(src)} style={media} />
       )}
     </div>
   );
@@ -90,7 +104,7 @@ const StickerTrack: React.FC<{ stickers: Sticker[]; style: Style }> = ({ sticker
         const dur = Math.max(1, Math.round(st.e * fps) - from);
         const sfx = st.sfx === undefined ? "pop" : st.sfx;
         return (
-          <Sequence key={`st${i}`} from={from} durationInFrames={dur} layout="none" name={`sticker ${i + 1}: ${st.src}`}>
+          <Sequence key={`st${i}`} from={from} durationInFrames={dur} layout="none" name={`sticker ${i + 1}: ${st.src ?? st.emoji}`}>
             <StickerView st={st} style={style} />
             {sfx && <Audio src={SFX.has(sfx) ? staticFile(`sfx/${sfx}.wav`) : asset(sfx)} volume={style.sfx?.volume ?? 0.35} />}
           </Sequence>
@@ -193,6 +207,8 @@ const Edit: React.FC<Props & { assets: string }> = ({ video, words, beats, style
         const area = ibx
           ? { top: Math.round(ibx.bottom + 50), height: Math.max(160, SAFE.bottom - Math.round(ibx.bottom + 50)), width: SAFE.right - SAFE.left, left: SAFE.left }
           : areaFor(b.layout, splitY, fill);
+        // top-aligned panels get a shorter area that starts at the top of the safe zone, so they sit higher
+        if (b.panelAlign === "top" && !ibx && !fill) area.height = Math.min(area.height, 400);
         const enter: Enter = fill ? "fade" : b.enter ?? (style.motion.energy === "calm" ? "fade" : ENTERS[i % ENTERS.length]);
         // panels lay out a little narrower than the area: the entrance pop + slow push-in grow them ~4%
         const inner = fill ? area.width : Math.round(area.width * 0.94);
@@ -200,7 +216,7 @@ const Edit: React.FC<Props & { assets: string }> = ({ video, words, beats, style
         return (
           <Sequence key={i} from={from} durationInFrames={dur} layout="none" name={`beat ${i + 1}: ${b.panel.type}`}>
             <SurfaceContext.Provider value={surfaceFor(b, style)}>
-            <div style={{ position: "absolute", ...area, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ position: "absolute", ...area, display: "flex", alignItems: b.panelAlign === "top" ? "flex-start" : "center", justifyContent: "center" }}>
               <Arrive enter={enter} dur={dur}>
                 {fill ? (
                   <div style={{ width: area.width, height: area.height }}>

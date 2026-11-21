@@ -114,6 +114,7 @@ for (const b of beats) {
 // stickers: check files, measure shape (and clip length for videos)
 const stickers = edit.stickers ?? [];
 stickers.forEach((st, i) => {
+  if (st.emoji) { st.ratio = 1; if (!(st.e > st.s)) problems.push(`sticker ${i + 1}: end must be after start`); return; }
   const f = path.join(P, "assets", String(st.src).replace(/^assets\//, ""));
   if (!fs.existsSync(f)) { problems.push(`sticker ${i + 1}: can't find assets/${st.src}`); return; }
   try {
