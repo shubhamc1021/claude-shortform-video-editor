@@ -8,7 +8,7 @@ import { AssetsContext, SurfaceContext, useAsset } from "./components/RichText";
 import { H, mergeStyle, SAFE, springFor, StyleContext, useFonts, W } from "./style";
 import type { Beat, Enter, Layout, Props, Style } from "./types";
 
-const SFX = new Set(["whoosh", "pop", "chime"]);
+const SFX = new Set(["whoosh", "pop", "chime", "chew"]);
 
 /** The sound a beat plays, if any: its own `sfx`, or (with style.sfx.auto) a whoosh on a zoom-out and a chime on a full-screen card. */
 export const sfxFor = (b: Beat, prev: Beat | undefined, s: Style): string | null => {

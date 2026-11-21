@@ -53,7 +53,7 @@ export type Beat = {
 };
 
 /** Built-in sound effects (engine/sfx/). */
-export type SfxName = "whoosh" | "pop" | "chime";
+export type SfxName = "whoosh" | "pop" | "chime" | "chew";
 
 export type Edit = {
   video: string; // staticFile path of the cut

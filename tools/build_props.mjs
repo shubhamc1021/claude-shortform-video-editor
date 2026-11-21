@@ -34,7 +34,7 @@ const duration = read("words.json").duration;
 // ---- check the edit ----
 const PANELS = new Set(["title", "stat", "list", "media", "logos", "compare", "chat", "typing", "icon", "quote"]);
 const LAYOUTS = new Set(["face", "split", "full", "overlay", "inset"]);
-const SFX = new Set(["whoosh", "pop", "chime"]);
+const SFX = new Set(["whoosh", "pop", "chime", "chew"]);
 const isColour = (v) => /^(#|rgb|hsl)/i.test(v);
 const problems = [];
 const warnings = [];

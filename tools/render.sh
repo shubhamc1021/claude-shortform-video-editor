@@ -36,5 +36,14 @@ else
   tools/master_audio.sh "$OUT/.render.mp4" "$FINAL"
 fi
 rm -f "$OUT/.render.mp4"
+
+# A fixed series ending (projects/<slug>/outro.mp4) is attached after mastering, with its own sound untouched.
+if [ -f "$P/outro.mp4" ]; then
+  echo "attaching the series ending (outro.mp4)"
+  ffmpeg -nostdin -hide_banner -loglevel error -y -i "$FINAL" -i "$P/outro.mp4" -filter_complex \
+    "[0:v]scale=1080:1920,fps=30,setsar=1,format=yuv420p[v0];[1:v]scale=1080:1920,fps=30,setsar=1,format=yuv420p[v1];[0:a]aresample=48000,aformat=channel_layouts=stereo[a0];[1:a]aresample=48000,aformat=channel_layouts=stereo[a1];[v0][a0][v1][a1]concat=n=2:v=1:a=1[v][a]" \
+    -map "[v]" -map "[a]" -c:v libx264 -preset veryfast -crf 17 -c:a aac -b:a 256k -movflags +faststart "$OUT/.with-outro.mp4"
+  mv "$OUT/.with-outro.mp4" "$FINAL"
+fi
 echo "done: $FINAL"
 echo "next: ./edit qa $SLUG $V"
