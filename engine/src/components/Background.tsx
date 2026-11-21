@@ -1,5 +1,6 @@
 import React from "react";
-import { AbsoluteFill, OffthreadVideo, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Img, OffthreadVideo, useCurrentFrame, useVideoConfig } from "remotion";
+import { useAsset } from "./RichText";
 import { H, useStyle, W } from "../style";
 
 /** The canvas behind graphics. "blur" uses a dark, blurred copy of your own video. */
@@ -31,4 +32,21 @@ export const Background: React.FC<{ video: string }> = ({ video }) => {
     );
   }
   return <AbsoluteFill style={{ background: bg }} />;
+};
+
+/** Behind a zoomed-out (inset) video: a solid colour ("#hex"), or an image/video from assets/ that slowly pushes in. */
+export const InsetBackground: React.FC<{ bg?: string; t0: number; dur: number }> = ({ bg, t0, dur }) => {
+  const s = useStyle();
+  const frame = useCurrentFrame();
+  const asset = useAsset();
+  const { fps } = useVideoConfig();
+  const v = bg || s.colors.background;
+  if (/^(#|rgb|hsl)/i.test(v)) return <AbsoluteFill style={{ background: v }} />;
+  const p = Math.min(1, Math.max(0, (frame / fps - t0) / Math.max(0.1, dur)));
+  const media: React.CSSProperties = { width: W, height: H, objectFit: "cover", transform: `scale(${1.04 + 0.04 * p})` };
+  return (
+    <AbsoluteFill style={{ background: s.colors.background, overflow: "hidden" }}>
+      {/\.(mp4|mov|webm|m4v)$/i.test(v) ? <OffthreadVideo src={asset(v)} muted style={media} /> : <Img src={asset(v)} style={media} />}
+    </AbsoluteFill>
+  );
 };

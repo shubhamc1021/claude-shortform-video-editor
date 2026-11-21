@@ -59,6 +59,10 @@ Translate the guide into the fields:
 | `colors.captionText`, `captionBg` | caption text and pill/box colour (rgba ok) |
 | `fonts.heading` / `body` / `caption` | any Google Fonts family name ("Inter", "Montserrat", "Space Grotesk", "DM Serif Display", "JetBrains Mono"...). Match the feel you saw. |
 | `fonts.headingWeight` / `bodyWeight` / `captionWeight` | 400 to 900 |
+| `fonts.accent` / `accentWeight` / `accentItalic` | a second font for `*emphasis*` and caption `keywords` (e.g. "Fraunces", 600, true for an editorial serif italic). Leave out for colour-only emphasis. |
+| `colors.captionAccent` | keyword colour over video and dark backgrounds, when the main accent is too dark to read there |
+| `sfx` | `{"auto": true, "volume": 0.3}`: soft whoosh on zoom-outs, chime on full-screen cards. Only if the creator likes sound effects. |
+| `inset` | `{"scale": 0.62, "frame": "polaroid"}`: size of the zoomed-out video card and its white border (`"none"` for no border) |
 | `background` | `solid` `gradient` `dots` `grid` `blur` (blurred copy of their own footage behind graphics, good for dark/cinematic styles) |
 | `captions.style` | `pill` `plain` (text + shadow) `outline` (thick stroke, TikTok classic, active word in accent) `box` (accent box) `highlight` (active word in accent) `none` |
 | `captions.uppercase`, `size` (48-80), `maxWords` (1-4), `maxChars` | from what you saw |

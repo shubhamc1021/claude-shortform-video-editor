@@ -40,7 +40,10 @@ graph = job / ".cut_filter.txt"
 graph.write_text("".join(parts) + "".join(ins) + f"concat=n={len(segs)}:v=1:a=1[v][a]")
 tmp = job / "cut.tmp.mp4"
 # the Mac's hardware encoder first (fast), x264 if it isn't available
-for enc in (["-c:v", "h264_videotoolbox", "-b:v", "16M", "-maxrate", "24M", "-bufsize", "32M"], ["-c:v", "libx264", "-preset", "veryfast", "-crf", "17"]):
+ENCODERS = [["-c:v", "libx264", "-preset", "veryfast", "-crf", "17"]]
+if sys.platform == "darwin":
+    ENCODERS.insert(0, ["-c:v", "h264_videotoolbox", "-b:v", "16M", "-maxrate", "24M", "-bufsize", "32M"])
+for enc in ENCODERS:
     r = subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-y", "-i", str(job / "source.mp4"),
                         "-filter_complex_script", str(graph), "-map", "[v]", "-map", "[a]", "-r", "30", *enc, "-pix_fmt", "yuv420p",
                         "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-movflags", "+faststart", str(tmp)])

@@ -1,6 +1,6 @@
 import React, { createContext, useContext } from "react";
 import { Img, interpolate, staticFile, useCurrentFrame } from "remotion";
-import { markColor, useStyle } from "../style";
+import { accentFont, markColor, useStyle } from "../style";
 import { Ink } from "./Ink";
 
 /** The colour text currently sits on (canvas or card), so accent words stay readable on both. */
@@ -77,8 +77,11 @@ export const RichText: React.FC<{ text: string; color?: string }> = ({ text, col
   const style = useStyle();
   const asset = useAsset();
   const surface = useContext(SurfaceContext);
-  // a light accent (yellow) on a white card is unreadable as text: show it as a highlighter stripe instead
-  const accentReads = contrast(style.colors.accent, surface) >= 2.6;
+  // pick whichever accent reads best on this surface (the main accent, or the lighter caption accent on dark/mid backgrounds);
+  // if neither reads (a yellow accent on a white card), show it as a highlighter stripe instead
+  const options = [style.colors.accent, style.colors.captionAccent].filter(Boolean) as string[];
+  const acc = contrast(options[0], surface) >= 3 ? options[0] : options.reduce((a, b) => (contrast(b, surface) > contrast(a, surface) ? b : a));
+  const accentReads = contrast(acc, surface) >= 2.6;
   const out: React.ReactNode[] = [];
   let last = 0;
   let k = 0;
@@ -88,8 +91,8 @@ export const RichText: React.FC<{ text: string; color?: string }> = ({ text, col
       out.push(<Mark key={k++} kind={m[1] as MarkKind} delay={m[2] ? Number(m[2]) : 6}>{m[3]}</Mark>);
     } else if (m[4]) {
       out.push(
-        accentReads ? <span key={k++} style={{ color: style.colors.accent }}>{m[4]}</span>
-          : <span key={k++} style={{ background: style.colors.accent, color: style.colors.ink, padding: "0 0.14em", borderRadius: "0.12em", boxDecorationBreak: "clone", WebkitBoxDecorationBreak: "clone" }}>{m[4]}</span>,
+        accentReads ? <span key={k++} style={{ ...accentFont(style), color: acc }}>{m[4]}</span>
+          : <span key={k++} style={{ ...accentFont(style), background: style.colors.accent, color: style.colors.ink, padding: "0 0.14em", borderRadius: "0.12em", boxDecorationBreak: "clone", WebkitBoxDecorationBreak: "clone" }}>{m[4]}</span>,
       );
     } else if (m[5]) {
       out.push(<Img key={k++} src={asset(m[5])} style={{ height: "0.9em", verticalAlign: "-0.1em", margin: "0 0.08em" }} />);

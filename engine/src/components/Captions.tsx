@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { interpolate, useCurrentFrame, useVideoConfig } from "remotion";
-import { fontStack, useStyle } from "../style";
+import { accentFont, fontStack, useStyle } from "../style";
 import type { Style, Word } from "../types";
 
 type Chunk = { words: Word[]; s: number; e: number };
@@ -34,14 +34,29 @@ export const chunkWords = (words: Word[], s: Style): Chunk[] => {
   return out.map((c, i) => ({ ...c, e: out[i + 1] && out[i + 1].s - c.e < 0.6 ? out[i + 1].s : c.e + 0.25 }));
 };
 
+/** Which words are keywords: each keyword (one word or a phrase) is matched against consecutive words, ignoring case and punctuation. */
+export const keywordSet = (words: Word[], keywords: string[] = []): Set<Word> => {
+  const out = new Set<Word>();
+  const toks = words.map((w) => bare(w.text).replace(/'/g, ""));
+  for (const k of keywords) {
+    const parts = k.split(/\s+/).map((p) => bare(p).replace(/'/g, "")).filter(Boolean);
+    if (!parts.length) continue;
+    for (let i = 0; i + parts.length <= toks.length; i++) {
+      if (parts.every((p, j) => toks[i + j] === p)) for (let j = 0; j < parts.length; j++) out.add(words[i + j]);
+    }
+  }
+  return out;
+};
+
 const clean = (t: string) => t.replace(/[.,!?;:"“”]+$/g, "").replace(/^["“”]+/, "");
 
-export const Captions: React.FC<{ words: Word[]; y: number }> = ({ words, y }) => {
+export const Captions: React.FC<{ words: Word[]; y: number; keywords?: string[] }> = ({ words, y, keywords }) => {
   const s = useStyle();
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const t = frame / fps;
   const chunks = useMemo(() => chunkWords(words, s), [words, s]);
+  const keys = useMemo(() => keywordSet(words, keywords), [words, keywords]);
   const c = chunks.find((x) => t >= x.s && t < x.e);
   if (!c || s.captions.style === "none") return null;
 
@@ -66,7 +81,14 @@ export const Captions: React.FC<{ words: Word[]; y: number }> = ({ words, y }) =
         {c.words.map((w, i) => {
           const active = (st === "highlight" || st === "outline") && t >= w.s && (i === c.words.length - 1 || t < c.words[i + 1].s);
           return (
-            <span key={i} style={{ color: active ? s.colors.accent : undefined }}>
+            <span
+              key={i}
+              style={
+                keys.has(w)
+                  ? { ...accentFont(s), color: s.colors.captionAccent || s.colors.accent, fontSize: s.fonts.accent ? "1.12em" : undefined, textTransform: "none" }
+                  : { color: active ? s.colors.accent : undefined }
+              }
+            >
               {clean(w.text)}
               {i < c.words.length - 1 ? " " : ""}
             </span>

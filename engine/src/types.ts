@@ -8,7 +8,8 @@ export type Layout =
   | "face" // just you, full screen (optionally punched in)
   | "split" // graphic on top, you on the bottom
   | "full" // graphic fills the screen, your voice keeps going
-  | "overlay"; // you full screen with a graphic card floating in the top half
+  | "overlay" // you full screen with a graphic card floating in the top half
+  | "inset"; // zoom-out: your video shrinks into a framed card on a colour or image background (beat.bg)
 
 export type Enter = "up" | "down" | "left" | "right" | "pop" | "fade" | "none";
 
@@ -44,8 +45,14 @@ export type Beat = {
   zoom?: number; // face punch-in (1 = none). Face/split beats alternate automatically if unset
   enter?: Enter; // how the graphic arrives (cycles automatically if unset)
   captions?: boolean; // false hides captions for this beat
+  bg?: string; // inset only: "#hex" colour or an image/video in assets/ (e.g. an outfit-matched Pinterest pick)
+  sfx?: SfxName | string | false; // sound at the start of the beat: built-in name or a file in assets/; false = none
+  sfxAt?: number; // play the sound at this time (cut timeline) instead of the beat start
   note?: string; // why this beat exists (shown in the storyboard)
 };
+
+/** Built-in sound effects (engine/sfx/). */
+export type SfxName = "whoosh" | "pop" | "chime";
 
 export type Edit = {
   video: string; // staticFile path of the cut
@@ -53,6 +60,7 @@ export type Edit = {
   faceCenter?: number; // where the face centre sits in the frame, 0 (top) - 1 (bottom)
   words: Word[];
   beats: Beat[];
+  keywords?: string[]; // words/phrases shown in the accent font + colour in captions ("self-worth", "attachment style")
 };
 
 export type CaptionStyle = "pill" | "plain" | "outline" | "box" | "highlight" | "none";
@@ -69,8 +77,14 @@ export type Style = {
     accent2: string;
     captionText: string;
     captionBg: string;
+    captionAccent?: string; // keyword colour in captions over video (defaults to accent)
   };
-  fonts: { heading: string; body: string; caption: string; headingWeight: number; bodyWeight: number; captionWeight: number };
+  fonts: {
+    heading: string; body: string; caption: string; headingWeight: number; bodyWeight: number; captionWeight: number;
+    accent?: string; // font for *emphasis* and caption keywords (e.g. "Fraunces"); empty = same font, accent colour only
+    accentWeight?: number;
+    accentItalic?: boolean;
+  };
   background: "solid" | "gradient" | "dots" | "grid" | "blur";
   captions: { style: CaptionStyle; uppercase: boolean; size: number; maxWords: number; maxChars: number };
   cards: { radius: number; shadow: "none" | "soft" | "hard"; border: boolean };
@@ -78,6 +92,8 @@ export type Style = {
   marks: { style: "hand" | "clean"; color: string };
   split: number; // share of the screen the graphic gets in split layout (0.4 - 0.6)
   punchIn: number; // face zoom used for automatic reframes
+  sfx?: { auto: boolean; volume: number }; // auto = soft whoosh on inset, chime on full; volume 0-1
+  inset?: { scale: number; frame: "polaroid" | "none" }; // size of the zoomed-out video card, and its border
 };
 
 export type Props = Edit & { style: Style };

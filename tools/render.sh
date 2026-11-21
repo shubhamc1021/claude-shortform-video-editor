@@ -14,8 +14,13 @@ if [ -z "$V" ]; then V=1; while [ -e "$OUT/$SLUG-v$V.mp4" ]; do V=$((V+1)); done
 FINAL="$OUT/$SLUG-v$V.mp4"
 
 node tools/build_props.mjs "$SLUG"
+# Use a browser that's already installed when there is one (REMOTION_BROWSER, or the headless Chromium some Linux
+# machines ship with), so Remotion doesn't need to download its own.
+BX=$(node tools/find_browser.mjs)
+BXARG=()
+[ -n "$BX" ] && BXARG=(--browser-executable="$BX")
 echo "rendering v$V (about 1-3 minutes per minute of video)..."
-(cd engine && npx --no-install remotion render src/index.ts Main "../$OUT/.render.mp4" --props="../$P/.props.json" --log=error)
+(cd engine && npx --no-install remotion render src/index.ts Main "../$OUT/.render.mp4" --props="../$P/.props.json" --log=error "${BXARG[@]}")
 
 MUSIC=$(node -e "try{const s=require('./my-style/style.json');if(s.music&&s.music.file)console.log(s.music.file+'|'+(s.music.level??-30)+'|'+(s.music.start??0))}catch(e){}")
 if [ -n "$MUSIC" ]; then

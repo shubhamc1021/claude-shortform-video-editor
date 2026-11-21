@@ -29,7 +29,9 @@ if echo "$HDR" | grep -qE "arib-std-b67|smpte2084|bt2020"; then
 fi
 encode() {
   # the Mac's hardware encoder is several times faster; fall back to x264 if it's unavailable
-  for V in "-c:v h264_videotoolbox -b:v 16M -maxrate 24M -bufsize 32M" "-c:v libx264 -preset veryfast -crf 17"; do
+  local ENCS=("-c:v libx264 -preset veryfast -crf 17")
+  [ "$(uname)" = "Darwin" ] && ENCS=("-c:v h264_videotoolbox -b:v 16M -maxrate 24M -bufsize 32M" "${ENCS[@]}")
+  for V in "${ENCS[@]}"; do
     # shellcheck disable=SC2086
     ffmpeg -nostdin -hide_banner -loglevel error -y -i "$SRC" -map 0:v:0 -map 0:a:0 -vf "$1" -r 30 \
       $V -c:a aac -b:a 192k -ar 48000 -movflags +faststart "$P/source.mp4" && return 0

@@ -26,7 +26,7 @@ fs.mkdirSync(outDir, { recursive: true });
 const strip = (t = "") => String(t).replace(/\[\[[a-z]+(?:@\d+)?:([^\]]+)\]\]/g, "$1").replace(/\*([^*]+)\*/g, "$1").replace(/\{\{img:([^}]+)\}\}/g, "[$1]").replace(/\n/g, " / ");
 const time = (s) => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, "0")}`;
 const said = (b) => props.words.filter((w) => w.s >= b.s - 0.05 && w.s < b.e - 0.05).map((w) => w.text).join(" ");
-const LAYOUT = { face: "Face only", split: "Split: graphic top, face bottom", full: "Full-screen graphic (voice continues)", overlay: "Graphic over the face" };
+const LAYOUT = { face: "Face only", split: "Split: graphic top, face bottom", full: "Full-screen graphic (voice continues)", overlay: "Graphic over the face", inset: "Zoom-out: video in a framed card on a background" };
 const describe = (b) => {
   const p = b.panel;
   if (!p) return b.zoom && b.zoom > 1 ? "Face, punched in" : "Face";
@@ -46,16 +46,29 @@ const describe = (b) => {
   }
 };
 
+// mirrors sfxFor() in engine/src/Video.tsx
+const sound = (b, prev) => {
+  if (b.sfx === false) return "";
+  if (typeof b.sfx === "string" && b.sfx) return b.sfx;
+  if (!props.style?.sfx?.auto) return "";
+  const joined = prev && prev.layout === b.layout && Math.abs(prev.e - b.s) < 0.05;
+  if (b.layout === "inset" && !joined) return "soft whoosh (auto)";
+  if (b.layout === "full" && !joined) return "soft chime (auto)";
+  return "";
+};
+
 console.log("bundling...");
 const serveUrl = await bundle({ entryPoint: path.join(ENGINE, "src", "index.ts"), publicDir: path.join(ENGINE, "public") });
-const composition = await selectComposition({ serveUrl, id: "Main", inputProps: props });
+const { findBrowser } = await import(path.join(ENGINE, "..", "tools", "find_browser.mjs"));
+const browserExecutable = findBrowser() || null;
+const composition = await selectComposition({ serveUrl, id: "Main", inputProps: props, browserExecutable });
 const beats = props.beats.length ? props.beats : [{ s: 0, e: props.duration, layout: "face" }];
 const cards = [];
 for (const [i, b] of beats.entries()) {
   // 70% into the beat: the graphic has landed, lists/marks have drawn
   const frame = Math.min(composition.durationInFrames - 1, Math.round((b.s + (b.e - b.s) * 0.7) * FPS));
   const file = path.join(outDir, `beat-${String(i + 1).padStart(2, "0")}.jpg`);
-  await renderStill({ composition, serveUrl, inputProps: props, frame, output: file, imageFormat: "jpeg", jpegQuality: 70, scale: 0.4 });
+  await renderStill({ composition, serveUrl, inputProps: props, frame, output: file, imageFormat: "jpeg", jpegQuality: 70, scale: 0.4, browserExecutable });
   process.stdout.write(`\rframe ${i + 1}/${beats.length}`);
   cards.push({ i, b, img: fs.readFileSync(file).toString("base64") });
 }
@@ -89,7 +102,8 @@ textarea:not(:placeholder-shown){border-color:var(--accent);background:#fff8f5}
 <div class="body"><div class="top">Beat ${i + 1}<span>${time(b.s)} – ${time(b.e)} · ${(b.e - b.s).toFixed(1)}s</span></div>
 <div class="said">“${esc(said(b) || "…")}”</div>
 <div class="row"><b>On screen:</b> ${esc(describe(b))}</div>
-<div class="row"><b>Layout:</b> ${esc(LAYOUT[b.layout] ?? b.layout)}</div>
+<div class="row"><b>Layout:</b> ${esc(LAYOUT[b.layout] ?? b.layout)}${b.layout === "inset" ? ` (background: ${esc(b.bg || "palette canvas")})` : ""}</div>
+${sound(b, props.beats[i - 1]) ? `<div class="row"><b>Sound:</b> ${esc(sound(b, props.beats[i - 1]))}</div>` : ""}
 ${b.note ? `<div class="row"><b>Why:</b> ${esc(b.note)}</div>` : ""}
 <textarea data-beat="${i + 1}" data-t="${time(b.s)}" placeholder="Note for this beat (optional)"></textarea></div></section>`).join("")}
 </main><div id="toast"></div>

@@ -32,7 +32,9 @@ const duration = read("words.json").duration;
 
 // ---- check the edit ----
 const PANELS = new Set(["title", "stat", "list", "media", "logos", "compare", "chat", "typing", "icon", "quote"]);
-const LAYOUTS = new Set(["face", "split", "full", "overlay"]);
+const LAYOUTS = new Set(["face", "split", "full", "overlay", "inset"]);
+const SFX = new Set(["whoosh", "pop", "chime"]);
+const isColour = (v) => /^(#|rgb|hsl)/i.test(v);
 const problems = [];
 const warnings = [];
 const beats = edit.beats ?? [];
@@ -53,6 +55,9 @@ beats.forEach((b, i) => {
   if (!LAYOUTS.has(b.layout)) problems.push(`${n}: layout "${b.layout}" isn't one of ${[...LAYOUTS].join(", ")}`);
   if ((b.layout === "split" || b.layout === "full" || b.layout === "overlay") && !b.panel) problems.push(`${n}: "${b.layout}" layout needs a panel`);
   if (b.layout === "face" && b.panel) problems.push(`${n}: "face" layout has no room for a panel (it would cover the face). Use "overlay" for a small card on the face, or "split".`);
+  if (b.bg !== undefined && b.layout !== "inset") warnings.push(`${n}: "bg" only shows on "inset" (zoom-out) beats`);
+  if (b.bg && !isColour(b.bg) && !fs.existsSync(path.join(P, "assets", b.bg.replace(/^assets\//, "")))) problems.push(`${n}: can't find background assets/${b.bg.replace(/^assets\//, "")}`);
+  if (typeof b.sfx === "string" && !SFX.has(b.sfx) && !fs.existsSync(path.join(P, "assets", b.sfx.replace(/^assets\//, "")))) problems.push(`${n}: sound "${b.sfx}" isn't built in (${[...SFX].join(", ")}) and isn't in assets/`);
   if (b.panel && !PANELS.has(b.panel.type)) problems.push(`${n}: panel type "${b.panel.type}" doesn't exist (${[...PANELS].join(", ")})`);
   for (const a of assetsOf(b.panel)) if (!fs.existsSync(path.join(P, "assets", a.replace(/^assets\//, "")))) problems.push(`${n}: can't find assets/${a.replace(/^assets\//, "")}`);
   if (b.e - b.s > 4.5 && b.panel && !["list", "logos", "chat", "typing", "media"].includes(b.panel.type)) warnings.push(`${n}: ${(b.e - b.s).toFixed(1)}s on one static ${b.panel.type}. Split it or add something that changes.`);
@@ -88,6 +93,13 @@ if (fs.existsSync(assetDir)) {
   walk(assetDir);
 }
 
+// built-in sound effects
+const sfxSrc = path.join(ROOT, "engine", "sfx");
+if (fs.existsSync(sfxSrc)) {
+  fs.mkdirSync(path.join(ROOT, "engine", "public", "sfx"), { recursive: true });
+  for (const f of fs.readdirSync(sfxSrc)) if (f.endsWith(".wav")) sync(path.join(sfxSrc, f), path.join(ROOT, "engine", "public", "sfx", f));
+}
+
 const props = {
   video: `${slug}/cut.mp4`,
   assets: `${slug}/assets/`,
@@ -95,6 +107,7 @@ const props = {
   faceCenter: edit.faceCenter ?? 0.42,
   words,
   beats,
+  keywords: edit.keywords ?? [],
   style,
 };
 fs.writeFileSync(path.join(P, ".props.json"), JSON.stringify(props));

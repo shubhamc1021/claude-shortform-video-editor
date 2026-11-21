@@ -14,19 +14,22 @@
 ```
 
 - `s` / `e`: seconds on the **cut** timeline (from `words.json`). Start each beat on the word that names its thing. Beats are in order and don't overlap. Cover the whole video; any gap shows plain face.
-- `layout`: `face` | `split` | `full` | `overlay` (see principles.md for when).
+- `layout`: `face` | `split` | `full` | `overlay` | `inset` (see principles.md for when). `inset` is the zoom-out: the video shrinks into a framed card on a background (`bg`); a panel is optional and sits under the card.
 - `panel`: the graphic (not needed for `face`).
 - `zoom`: face punch-in, like `1.15`. Unset = face/split beats alternate wide and punched-in automatically.
 - `enter`: `up` `down` `left` `right` `pop` `fade` `none`. Unset = cycles automatically.
 - `captions`: `false` hides captions for that beat (for example over a screenshot full of text).
 - `note`: why the beat exists. Shows on the storyboard card.
+- `bg` (inset only): `"#hex"` colour or an image/video file in `assets/`, e.g. an outfit-matched colour or a background the creator picked on Pinterest. Unset = the palette canvas. Consecutive inset beats with the same layout don't re-animate.
+- `sfx`: `"whoosh"` | `"pop"` | `"chime"` (built in, soft, made for this editor) or a sound file in `assets/`; `false` silences an automatic one. `sfxAt` plays it at a set time instead of the beat start. With `"sfx": {"auto": true}` in style.json, a fresh zoom-out gets a whoosh and a fresh full-screen card gets a chime automatically. Use `pop` by hand for small things popping in (a logo, a person's photo). Keep it sparing: sounds should feel like texture, not effects.
 - `faceCenter`: where the face's centre sits in the frame, 0 = top, 1 = bottom. Read it off `./edit face <slug>`. Split layout uses it to keep the face framed high.
+- `keywords` (top level, next to `beats`): words or phrases shown in the accent font and colour in the captions, e.g. `["self-worth", "attachment style"]`. Pick the psychological concepts and the emotional words the line turns on (3–8 per video, never filler). Matching ignores case and punctuation; a phrase matches only as consecutive words.
 
 ## Text markup (works in any text field)
 
 | Write | Get |
 |---|---|
-| `*word*` | word in the accent colour |
+| `*word*` | word in the accent colour (and the accent font, if the style sets `fonts.accent`) |
 | `[[circle:word]]` | a mark draws itself around it |
 | `[[underline:word]]` `[[strike:word]]` `[[highlight:word]]` | the other marks |
 | `[[circle@14:word]]` | drawn 14 frames (~0.5s) into the beat. Time it to land on the word: `(word.s - beat.s) * 30` |

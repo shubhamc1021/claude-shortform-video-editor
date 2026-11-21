@@ -49,6 +49,7 @@ Never invent numbers, names, reviews or results. If a graphic needs a placeholde
 | `split` | most explaining: the graphic carries the point while the face keeps the connection |
 | `full` | big ideas, numbers, titles, screenshots that need the room, B-roll |
 | `overlay` | a quick small card (logo, number) while staying on the face |
+| `inset` | a zoom-out for a punchline, a shift in topic or a moment to breathe: the speaker shrinks into a framed card on a background (outfit-matched colour or a picked image), optionally with one short line under the card. Once or twice a video. |
 
 ## Captions
 

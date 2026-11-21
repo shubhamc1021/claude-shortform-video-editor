@@ -1,3 +1,4 @@
+import type React from "react";
 import { createContext, useContext, useEffect, useState } from "react";
 import { continueRender, delayRender } from "remotion";
 import type { Style } from "./types";
@@ -31,6 +32,8 @@ export const DEFAULT_STYLE: Style = {
   marks: { style: "hand", color: "" },
   split: 0.5,
   punchIn: 1.12,
+  sfx: { auto: false, volume: 0.35 },
+  inset: { scale: 0.62, frame: "polaroid" },
 };
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
@@ -47,6 +50,8 @@ export const mergeStyle = (s?: DeepPartial<Style>): Style => {
     cards: { ...d.cards, ...(x.cards ?? {}) },
     motion: { ...d.motion, ...(x.motion ?? {}) },
     marks: { ...d.marks, ...(x.marks ?? {}) },
+    sfx: { ...d.sfx!, ...(x.sfx ?? {}) },
+    inset: { ...d.inset!, ...(x.inset ?? {}) },
   } as Style;
 };
 
@@ -71,12 +76,20 @@ const SYSTEM = new Set(["system-ui", "-apple-system", "Helvetica", "Helvetica Ne
 /** Load the style's Google Fonts before the first frame renders (falls back to system fonts if offline). */
 export const useFonts = (s: Style) => {
   const families = [...new Set([s.fonts.heading, s.fonts.body, s.fonts.caption])].filter((f) => f && !SYSTEM.has(f));
-  const key = families.join("|");
+  const accent = s.fonts.accent && !SYSTEM.has(s.fonts.accent) ? s.fonts.accent : "";
+  const key = [...families, accent].join("|");
   const [handle] = useState(() => (families.length ? delayRender(`fonts: ${key}`, { timeoutInMilliseconds: 20000 }) : null));
   useEffect(() => {
     if (handle === null) return;
     const weights = [s.fonts.headingWeight, s.fonts.bodyWeight, s.fonts.captionWeight];
-    const wait = loadFonts(families, weights).then(() => Promise.all(families.flatMap((f) => weights.map((w) => document.fonts.load(`${w} 40px "${f}"`)))));
+    const aw = s.fonts.accentWeight ?? 600;
+    const ai = s.fonts.accentItalic !== false;
+    const wait = Promise.all([loadFonts(families, weights), accent ? loadAccent(accent, aw, ai) : Promise.resolve()]).then(() =>
+      Promise.all([
+        ...families.flatMap((f) => weights.map((w) => document.fonts.load(`${w} 40px "${f}"`))),
+        ...(accent ? [document.fonts.load(`${ai ? "italic " : ""}${aw} 40px "${accent}"`)] : []),
+      ]),
+    );
     const timeout = new Promise((r) => setTimeout(r, 15000));
     Promise.race([wait, timeout])
       .catch(() => undefined)
@@ -109,5 +122,20 @@ const loadFonts = (families: string[], weights: number[]) =>
       }
     }),
   ).then(() => undefined));
+
+// The accent font (for *emphasis* and caption keywords), loaded in italic when asked.
+const loadAccent = async (f: string, w: number, italic: boolean) => {
+  const fam = encodeURIComponent(f).replace(/%20/g, "+");
+  const spec = italic ? `ital,wght@0,${w};1,${w}` : `wght@${w}`;
+  if (!(await css(`https://fonts.googleapis.com/css2?family=${fam}:${spec}&display=block`))) {
+    await css(`https://fonts.googleapis.com/css2?family=${fam}:ital@0;1&display=block`);
+  }
+};
+
+/** CSS for accent text: the accent font (if set) in italic, or nothing extra. */
+export const accentFont = (s: Style): React.CSSProperties =>
+  s.fonts.accent
+    ? { fontFamily: `"${s.fonts.accent}", Georgia, serif`, fontStyle: s.fonts.accentItalic === false ? "normal" : "italic", fontWeight: s.fonts.accentWeight ?? 600 }
+    : {};
 
 export const fontStack = (f: string) => `"${f}", -apple-system, "Helvetica Neue", Arial, sans-serif`;

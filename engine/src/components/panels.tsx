@@ -1,16 +1,22 @@
-import React from "react";
+import React, { use } from "react";
 import { Easing, Img, interpolate, OffthreadVideo, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { fontStack, markColor, shadowOf, springFor, useStyle } from "../style";
 import type { Panel, Style } from "../types";
 import { Ink } from "./Ink";
-import { plain, RichText, SurfaceContext, useAsset } from "./RichText";
+import { contrast, plain, RichText, SurfaceContext, useAsset } from "./RichText";
 
 /** Everything a panel needs to know about the beat it lives in. */
 export type PanelCtx = { t0: number; dur: number; width: number; full: boolean; overlay?: boolean };
 
 const isVideo = (src: string) => /\.(mp4|mov|webm|m4v)$/i.test(src);
-const onBg = (s: Style) => (s.background === "blur" ? "#FFFFFF" : s.colors.ink);
-const mutedOnBg = (s: Style) => (s.background === "blur" ? "rgba(255,255,255,0.78)" : s.colors.muted);
+// Text straight on the canvas: white or ink, whichever reads better on what's behind it (blurred video, the canvas,
+// or a zoom-out background). Reads SurfaceContext with use(), so it is safe inside conditionals during render.
+const darkSurface = (s: Style) => {
+  const surf = use(SurfaceContext);
+  return contrast("#FFFFFF", surf) >= contrast(s.colors.ink, surf);
+};
+const onBg = (s: Style) => (darkSurface(s) ? "#FFFFFF" : s.colors.ink);
+const mutedOnBg = (s: Style) => (darkSurface(s) ? "rgba(255,255,255,0.78)" : s.colors.muted);
 
 /** Frame (inside the beat) when a cue at `at` seconds lands; spreads un-timed items across the first 70%. */
 const cueFrames = (n: number, at: (number | undefined)[], ctx: PanelCtx, fps: number) =>
