@@ -85,7 +85,7 @@ export const Captions: React.FC<{ words: Word[]; y: number; keywords?: string[] 
               key={i}
               style={
                 keys.has(w)
-                  ? { ...accentFont(s), color: s.colors.captionAccent || s.colors.accent, fontSize: s.fonts.accent ? "1.12em" : undefined, textTransform: "none" }
+                  ? { ...accentFont(s), color: s.colors.captionAccent || s.colors.accent, fontSize: s.fonts.accent ? "1.12em" : undefined, textTransform: "none", textShadow: "0 0 22px rgba(0,0,0,0.75), 0 2px 6px rgba(0,0,0,0.8)" }
                   : { color: active ? s.colors.accent : undefined }
               }
             >

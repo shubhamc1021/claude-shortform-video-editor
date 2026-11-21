@@ -45,7 +45,7 @@ const captionY = (layout: Layout, splitY: number) => (layout === "split" ? split
 
 /** The colour a beat's panel text sits on, so accent words pick a readable colour. */
 const surfaceFor = (b: Beat, s: Style) => {
-  if (b.layout === "inset") return b.bg && /^#/.test(b.bg) ? b.bg : b.bg ? "#202020" : s.colors.background;
+  if (b.layout === "inset") return b.bg && /^#/.test(b.bg) ? b.bg : b.bg ? b.bgTone || "#202020" : s.colors.background;
   if (b.layout === "overlay" || s.background === "blur") return "#202020"; // over video
   return s.colors.background;
 };

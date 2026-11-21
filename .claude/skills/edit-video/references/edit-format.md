@@ -46,7 +46,7 @@ All file paths are relative to `projects/<slug>/assets/`. All `at` values are **
 ```json
 { "type": "title", "text": "Stop [[strike:typing]] *talking* to AI", "sub": "it's 3x faster", "size": 110, "align": "center" }
 ```
-Big words. Size is automatic from the length; set `size` only to override. Keep it under ~8 words.
+Big words. Size is automatic from the length; set `size` only to override. Keep it under ~8 words. `"card": true` puts the title on a soft card (ink text, `sub` shown above as a small label): use it for `overlay` titles over busy footage, where white text on video would be hard to read.
 
 ### stat
 ```json

@@ -17,7 +17,7 @@ export type Enter = "up" | "down" | "left" | "right" | "pop" | "fade" | "none";
 export type Cue = { at?: number };
 
 export type Panel =
-  | { type: "title"; text: string; sub?: string; size?: number; align?: "center" | "left" }
+  | { type: "title"; text: string; sub?: string; size?: number; align?: "center" | "left"; card?: boolean }
   | { type: "stat"; value: string; label?: string; countUp?: boolean }
   | { type: "list"; title?: string; items: (string | ({ text: string } & Cue))[]; marker?: "check" | "number" | "bullet" | "x"; at?: number[] }
   | {
@@ -45,6 +45,7 @@ export type Beat = {
   zoom?: number; // face punch-in (1 = none). Face/split beats alternate automatically if unset
   enter?: Enter; // how the graphic arrives (cycles automatically if unset)
   captions?: boolean; // false hides captions for this beat
+  bgTone?: string; // set by build_props: average colour of an image bg, so text on it picks a readable colour
   bg?: string; // inset only: "#hex" colour or an image/video in assets/ (e.g. an outfit-matched Pinterest pick)
   sfx?: SfxName | string | false; // sound at the start of the beat: built-in name or a file in assets/; false = none
   sfxAt?: number; // play the sound at this time (cut timeline) instead of the beat start

@@ -11,6 +11,7 @@
  */
 import fs from "fs";
 import path from "path";
+import { execFileSync } from "child_process";
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const slug = process.argv[2];
@@ -98,6 +99,16 @@ const sfxSrc = path.join(ROOT, "engine", "sfx");
 if (fs.existsSync(sfxSrc)) {
   fs.mkdirSync(path.join(ROOT, "engine", "public", "sfx"), { recursive: true });
   for (const f of fs.readdirSync(sfxSrc)) if (f.endsWith(".wav")) sync(path.join(sfxSrc, f), path.join(ROOT, "engine", "public", "sfx", f));
+}
+
+// average colour of each image background, so text on it can pick a readable colour
+for (const b of beats) {
+  if (b.layout !== "inset" || !b.bg || isColour(b.bg)) continue;
+  try {
+    const f = path.join(P, "assets", b.bg.replace(/^assets\//, ""));
+    const px = execFileSync("ffmpeg", ["-loglevel", "error", "-i", f, "-frames:v", "1", "-vf", "scale=1:1:flags=area", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"]);
+    b.bgTone = "#" + [...px.subarray(0, 3)].map((v) => v.toString(16).padStart(2, "0")).join("");
+  } catch { /* unknown tone: treated as dark */ }
 }
 
 const props = {

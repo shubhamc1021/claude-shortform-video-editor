@@ -53,6 +53,18 @@ const Title: React.FC<{ p: Extract<Panel, { type: "title" }>; ctx: PanelCtx }> =
   const n = plain(p.text).length;
   const auto = n <= 10 ? 160 : n <= 20 ? 132 : n <= 36 ? 112 : n <= 60 ? 92 : 74;
   const size = (p.size ?? auto) * (ctx.full ? 1 : 0.92);
+  if (p.card) {
+    // a soft card behind the title: readable over busy footage, ink text, accent words in the accent font
+    const cs = Math.round(size * 0.62);
+    return (
+      <Card pad={Math.round(cs * 0.55)} style={{ textAlign: p.align ?? "center", display: "inline-block", maxWidth: ctx.width }}>
+        {p.sub && <div style={{ fontFamily: fontStack(s.fonts.body), fontWeight: s.fonts.bodyWeight, fontSize: Math.max(30, cs * 0.36), color: s.colors.muted, letterSpacing: "0.04em", marginBottom: cs * 0.18 }}><RichText text={p.sub} /></div>}
+        <div style={{ fontFamily: fontStack(s.fonts.heading), fontWeight: s.fonts.headingWeight, fontSize: cs, lineHeight: 1.05, letterSpacing: "-0.02em", color: s.colors.ink, textWrap: "balance" }}>
+          <RichText text={p.text} />
+        </div>
+      </Card>
+    );
+  }
   const shadow = ctx.overlay ? "0 4px 24px rgba(0,0,0,0.55), 0 2px 4px rgba(0,0,0,0.5)" : undefined;
   return (
     <div style={{ textAlign: p.align ?? "center", width: ctx.width }}>

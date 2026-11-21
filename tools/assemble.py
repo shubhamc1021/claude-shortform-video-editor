@@ -29,11 +29,14 @@ for k, (s, e, *note) in enumerate(picks):
     segs.append({"s": a, "e": b, "cut_s": round(t, 3), "cut_e": round(t + b - a, 3), "note": note[0] if note else ""})
     t += b - a
 
-parts, ins = [], []
+parts, ins, inputs = [], [], []
 for k, sg in enumerate(segs):
     d = sg["e"] - sg["s"]
-    parts.append(f"[0:v]trim={sg['s']}:{sg['e']},setpts=PTS-STARTPTS[v{k}];"
-                 f"[0:a]atrim={sg['s']}:{sg['e']},asetpts=PTS-STARTPTS,"
+    # each take is its own input, seeked to its start: trimming every take out of one shared input makes
+    # ffmpeg buffer frames for all of them at once, which runs out of memory on long or high-res footage
+    inputs += ["-ss", f"{sg['s']:.3f}", "-t", f"{d:.3f}", "-i", str(job / "source.mp4")]
+    parts.append(f"[{k}:v]setpts=PTS-STARTPTS[v{k}];"
+                 f"[{k}:a]asetpts=PTS-STARTPTS,"
                  f"afade=t=in:d=0.008,afade=t=out:st={max(0, d - 0.008):.3f}:d=0.008[a{k}];")
     ins.append(f"[v{k}][a{k}]")
 graph = job / ".cut_filter.txt"
@@ -44,7 +47,7 @@ ENCODERS = [["-c:v", "libx264", "-preset", "veryfast", "-crf", "17"]]
 if sys.platform == "darwin":
     ENCODERS.insert(0, ["-c:v", "h264_videotoolbox", "-b:v", "16M", "-maxrate", "24M", "-bufsize", "32M"])
 for enc in ENCODERS:
-    r = subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-y", "-i", str(job / "source.mp4"),
+    r = subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-y", *inputs,
                         "-filter_complex_script", str(graph), "-map", "[v]", "-map", "[a]", "-r", "30", *enc, "-pix_fmt", "yuv420p",
                         "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-movflags", "+faststart", str(tmp)])
     if r.returncode == 0:
