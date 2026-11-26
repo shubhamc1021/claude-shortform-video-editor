@@ -138,6 +138,7 @@ const props = {
   words,
   beats,
   keywords: edit.keywords ?? [],
+  captionY: edit.captionY,
   stickers,
   style,
 };

@@ -63,6 +63,7 @@ export type Edit = {
   words: Word[];
   beats: Beat[];
   keywords?: string[]; // words/phrases shown in the accent font + colour in captions ("self-worth", "attachment style")
+  captionY?: number; // caption centre on face/overlay beats, px from the top (default 1250); move it off busy clothing prints
   stickers?: Sticker[]; // small framed images/clips that pop in over whatever is on screen (reaction GIFs, memes)
 };
 
@@ -73,6 +74,7 @@ export type Sticker = {
   s: number; e: number; // cut timeline
   x: number; y: number; w: number;
   rotate?: number; // degrees
+  cutout?: boolean; // transparent PNG / webm with alpha: no frame, just a soft shadow
   sfx?: SfxName | string | false; // default "pop"
   ratio?: number; // width / height, filled in by build_props
   frames?: number; // clip length in frames (videos), filled in by build_props

@@ -74,18 +74,21 @@ const StickerView: React.FC<{ st: Sticker; style: Style }> = ({ st, style }) => 
   const h = st.w / (st.ratio || 1);
   const src = st.src ?? "";
   const isVid = /\.(mp4|mov|webm|m4v)$/i.test(src);
-  const media: React.CSSProperties = { width: "100%", height: "100%", objectFit: "cover", display: "block" };
+  const media: React.CSSProperties = { width: "100%", height: "100%", objectFit: st.cutout ? "contain" : "cover", display: "block" };
+  const frameLook: React.CSSProperties = st.cutout
+    ? { filter: "drop-shadow(0 16px 26px rgba(0,0,0,0.4))" }
+    : { borderRadius: 18, overflow: "hidden", boxShadow: `0 0 0 10px ${style.colors.surface}, 0 22px 50px rgba(0,0,0,0.35)` };
   return (
     <div
       style={{
         position: "absolute", left: st.x - st.w / 2, top: st.y - h / 2, width: st.w, height: h,
         transform: `scale(${0.4 + 0.6 * p}) rotate(${(st.rotate ?? 0) * p}deg)`, opacity: Math.min(p * 1.6, 1) * out,
-        borderRadius: 18, overflow: "hidden", boxShadow: `0 0 0 10px ${style.colors.surface}, 0 22px 50px rgba(0,0,0,0.35)`,
+        ...frameLook,
       }}
     >
       {isVid ? (
         <Loop durationInFrames={Math.max(1, st.frames ?? 30)}>
-          <OffthreadVideo src={asset(src)} muted style={media} />
+          <OffthreadVideo src={asset(src)} muted transparent={!!st.cutout} style={media} />
         </Loop>
       ) : (
         <Img src={asset(src)} style={media} />
@@ -147,7 +150,7 @@ export const Main: React.FC<Props & { assets: string }> = (props) => {
   );
 };
 
-const Edit: React.FC<Props & { assets: string }> = ({ video, words, beats, style, faceCenter = 0.42, keywords, stickers = [] }) => {
+const Edit: React.FC<Props & { assets: string }> = ({ video, words, beats, style, faceCenter = 0.42, keywords, stickers = [], captionY: capY }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const t = frame / fps;
@@ -235,7 +238,7 @@ const Edit: React.FC<Props & { assets: string }> = ({ video, words, beats, style
       })}
 
       {beat?.captions !== false && (
-        <Captions words={words} keywords={keywords} y={ib ? Math.round(ib.centerY + (ib.bottom - ib.top) * 0.22) : captionY(layout, splitY)} />
+        <Captions words={words} keywords={keywords} y={ib ? Math.round(ib.centerY + (ib.bottom - ib.top) * 0.22) : layout === "face" || layout === "overlay" ? capY ?? captionY(layout, splitY) : captionY(layout, splitY)} />
       )}
       <StickerTrack stickers={stickers} style={style} />
       <SfxTrack beats={beats} style={style} />
