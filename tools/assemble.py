@@ -24,8 +24,10 @@ END_EARLY = float(feel.get("end_early", 0.08))
 segs, t = [], 0.0
 for k, (s, e, *note) in enumerate(picks):
     last = k == len(picks) - 1
-    a = round(max(0.0, s - LEAD_IN), 3)
-    b = round(e + 0.08 if last else max(s + 0.2, e - END_EARLY), 3)
+    # snap to whole frames: video can only be cut on frames, so unsnapped edges drift a little per take,
+    # and over many takes the cut_map timings (and the captions built from them) fall out of sync
+    a = round(round(max(0.0, s - LEAD_IN) * 30) / 30, 4)
+    b = round(round((e + 0.08 if last else max(s + 0.2, e - END_EARLY)) * 30) / 30, 4)
     segs.append({"s": a, "e": b, "cut_s": round(t, 3), "cut_e": round(t + b - a, 3), "note": note[0] if note else ""})
     t += b - a
 
@@ -34,9 +36,11 @@ for k, sg in enumerate(segs):
     d = sg["e"] - sg["s"]
     # each take is its own input, seeked to its start: trimming every take out of one shared input makes
     # ffmpeg buffer frames for all of them at once, which runs out of memory on long or high-res footage
-    inputs += ["-ss", f"{sg['s']:.3f}", "-t", f"{d:.3f}", "-i", str(job / "source.mp4")]
-    parts.append(f"[{k}:v]setpts=PTS-STARTPTS[v{k}];"
-                 f"[{k}:a]asetpts=PTS-STARTPTS,"
+    # an exact frame count per take (trim on the decoded stream), so every take is exactly its snapped length
+    inputs += ["-ss", f"{sg['s']:.4f}", "-t", f"{d + 0.5:.3f}", "-i", str(job / "source.mp4")]
+    nf = round(d * 30)
+    parts.append(f"[{k}:v]trim=end_frame={nf},setpts=PTS-STARTPTS[v{k}];"
+                 f"[{k}:a]atrim=duration={nf / 30:.4f},asetpts=PTS-STARTPTS,"
                  f"afade=t=in:d=0.008,afade=t=out:st={max(0, d - 0.008):.3f}:d=0.008[a{k}];")
     ins.append(f"[v{k}][a{k}]")
 graph = job / ".cut_filter.txt"
